@@ -1,0 +1,18 @@
+version: '3'
+
+services:
+  bao_postgres:
+    image: postgres:12.10
+    container_name: bao_postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+    - bao-postgres-volume:/var/lib/postgresql/data
+    restart: on-failure
+    ports:
+      - "5438:5432"
+
+volumes:
+  bao-postgres-volume:

@@ -1,5 +1,5 @@
 defmodule BaoWeb.Router do
-  alias BaoWeb.EventController
+  # alias BaoWeb.EventController
   use BaoWeb, :router
 
   pipeline :api do

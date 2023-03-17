@@ -11,9 +11,9 @@ defmodule BaoWeb.EventController do
   #   render(conn, "index.json", events: events)
   # end
 
-  def create(conn, %{"event" => event_params}) do
+  def create(conn, attrs = %{"pubkeys" => pubkeys}) do
     # TODO: Just return pubkeys & event_point
-    with {:ok, %Event{} = event} <- Events.create_event(event_params) do
+    with {:ok, %Event{} = event} <- Events.create_event(attrs) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", Routes.event_path(conn, :show, event))
@@ -27,10 +27,13 @@ defmodule BaoWeb.EventController do
     render(conn, "show.json", event: event)
   end
 
-  def update(conn, %{"point" => point, "signature" => signature}) do
-    event = Events.get_event_by_point!(point)
+  def update(conn, %{"point" => user_point, "signature" => signature}) do
+    event = Events.get_event_by_point!(user_point)
 
-    event_pk = Events.get_event_pubkey!(point)
+    # TODO error if this fails
+    true = Events.verify_event_signature(event.point, user_point, signature)
+
+    event_pk = Events.get_event_pubkey!(user_point)
 
     with {:ok, _} <- EventPubkeys.update_event_pubkey(event_pk, %{"signature" => signature}) do
       # If successfully verified sig

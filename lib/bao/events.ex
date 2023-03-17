@@ -8,18 +8,20 @@ defmodule Bao.Events do
 
   alias Bao.Events.Event
 
-  @doc """
-  Returns the list of events.
+  alias Bitcoinex.Secp256k1
 
-  ## Examples
+  # @doc """
+  # Returns the list of events.
 
-      iex> list_events()
-      [%Event{}, ...]
+  # ## Examples
 
-  """
-  def list_events do
-    Repo.all(Event)
-  end
+  #     iex> list_events()
+  #     [%Event{}, ...]
+
+  # """
+  # def list_events do
+  #   Repo.all(Event)
+  # end
 
   @doc """
   Gets a single event.
@@ -35,10 +37,10 @@ defmodule Bao.Events do
       ** (Ecto.NoResultsError)
 
   """
-  def get_event!(id), do: Repo.get!(Event, id)
+  # def get_event!(id), do: Repo.get!(Event, id)
 
-  def get_event_by_point!(point) do
-    # TODO
+  def get_event_pubkey_by_point!(point) do
+    Repo.get_by(EventPubkey, [point: point])
   end
 
   @doc """
@@ -53,12 +55,10 @@ defmodule Bao.Events do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_event(attrs \\ %{}) do
+  def create_event(attrs) do
     # create all pubkey entries
     # put len(pubkeys) in attrs
     # generate new event
-
-
     %Event{}
     |> Event.changeset(attrs)
     |> Repo.insert()
@@ -205,5 +205,15 @@ defmodule Bao.Events do
   """
   def change_event_pubkey(%EventPubkey{} = event_pubkey, attrs \\ %{}) do
     EventPubkey.changeset(event_pubkey, attrs)
+  end
+
+  def verify_event_signature(event_point, user_point, signature) do
+    sighash =
+      event_point
+      |> Base.decode16!( case: :lower)
+      |> :binary.decode_unsigned()
+    {:ok, user_pk} = Secp256k1.Point.lift_x(user_point)
+    {:ok, sig} = Secp256k1.Signature.parse_signature(signature)
+    Secp256k1.Schnorr.verify_signature(user_pk, sighash, sig)
   end
 end

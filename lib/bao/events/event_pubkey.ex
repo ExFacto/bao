@@ -7,7 +7,7 @@ defmodule Bao.Events.EventPubkey do
     field :signature, :string
     field :signed, :boolean, default: false
     field :signed_at, :utc_datetime
-    field :event_id, :id
+    belongs_to :event, Event
 
     timestamps()
   end
