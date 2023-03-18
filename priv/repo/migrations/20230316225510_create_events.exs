@@ -9,5 +9,7 @@ defmodule Bao.Repo.Migrations.CreateEvents do
 
       timestamps()
     end
+
+    create unique_index(:events, [:point])
   end
 end

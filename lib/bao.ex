@@ -7,6 +7,7 @@ defmodule Bao do
   if it comes from the database, an external API or others.
   """
 
+  alias Bitcoinex.Secp256k1
   alias Bitcoinex.Secp256k1.PrivateKey
 
   # point = get_point()
@@ -15,12 +16,14 @@ defmodule Bao do
 
   # TODO get once from env and store in memory
   def get_scalar() do
-    {:ok, privkey} =
+    {:ok, scalar} =
       Application.fetch_env!(:bao, :private_key)
       |> Base.decode16!(case: :lower)
       |> :binary.decode_unsigned()
       |> PrivateKey.new()
-    privkey
+
+
+    Secp256k1.force_even_y(scalar)
   end
 
   def get_point() do

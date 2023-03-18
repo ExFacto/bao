@@ -6,7 +6,7 @@ defmodule Bao.Repo.Migrations.CreateEventPubkeys do
       add :pubkey, :string
       add :signed, :boolean, default: false, null: false
       add :signature, :string
-      add :event_id, references(:events, on_delete: :nothing)
+      add :event_id, references(:events, on_delete: :nothing), null: false
 
       timestamps()
     end

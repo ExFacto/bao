@@ -9,7 +9,7 @@ defmodule Bao.Events.Event do
   alias Bitcoinex.Utils, as: BtcUtils
   alias Bitcoinex.Secp256k1
 
-  @bao_scalar Bao.get_scalar().d
+  @bao_scalar Bao.get_scalar()
 
   schema "events" do
     field :pubkey_ct, :integer
@@ -21,48 +21,73 @@ defmodule Bao.Events.Event do
   end
 
   @doc false
-  def changeset(event, attrs = %{"pubkeys" => pubkeys}) do
-    attrs =
-      attrs
-      |> Map.put("pubkey_ct", length(pubkeys))
-      |> Map.put("point", calculate_event_point(pubkeys))
-
+  def changeset(event, attrs) do
     event
-    |> cast(attrs, [:pubkey_ct, :point])
+    |> cast(attrs, [:pubkey_ct, :point, :scalar])
+    # |> cast_assoc(:event_pubkeys, with: &Bao.Events.EventPubkey.changeset/2)
     |> validate_required([:pubkey_ct, :point])
-    |> validate_length(:point, is: 33)
+    |> validate_scalar()
+    |> validate_length(:point, is: 66)
+    |> unique_constraint(:point)
     |> validate_number(:pubkey_ct, greater_than: 0)
+  end
+
+  def validate_scalar(changeset) do
+    validate_change(changeset, :scalar, fn :scalar, scalar ->
+      case scalar do
+        nil ->
+          []
+
+        scalar when is_binary(scalar) ->
+          if String.length(scalar) == 64 do
+            []
+          else
+            [scalar: "invalid scalar"]
+          end
+      end
+    end)
   end
 
   def calculate_event_hash(pubkeys) do
     # sort pubkeys, concatenate them, hash them, convert to point
-    {:ok, scalar} =
       pubkeys
-      |> Enum.map(fn pk -> {:ok, point} = Secp256k1.Point.lift_x(pk); point end)
+      |> Enum.map(fn pk ->
+        {:ok, point} = Secp256k1.Point.lift_x(pk)
+        point
+      end)
       |> Script.lexicographical_sort_pubkeys()
       |> Enum.reduce(<<>>, fn pk, acc -> acc <> Secp256k1.Point.x_bytes(pk) end)
+      # TODO Maybe tagged_hash this instead with custom tag
       |> BtcUtils.double_sha256()
       |> :binary.decode_unsigned()
-      |> Secp256k1.PrivateKey.new()
-    scalar
+  end
+
+  def calculate_event_hash_and_nonce(pubkeys) do
+    event_hash = calculate_event_hash(pubkeys)
+    event_nonce = Secp256k1.Ecdsa.deterministic_k(@bao_scalar, event_hash)
+    {event_hash, event_nonce}
   end
 
   def calculate_event_scalar(pubkeys) do
-    # the event_scalar is just the event_hash tweaked with the Bao's scalar
-    event_hash = calculate_event_hash(pubkeys)
-    {:ok, scalar} = PrivateKey.new(event_hash + @bao_scalar)
-    Secp256k1.force_even_y(scalar)
+    {event_hash, event_nonce} = calculate_event_hash_and_nonce(pubkeys)
+
+    # use Schnorr not ECDSA, even though RFC6979 is only standard for ECDSA it is ok to use for Schnorr
+    signature = Secp256k1.Schnorr.sign_with_nonce(@bao_scalar, event_nonce, event_hash)
+    # users were given event_point (see below). s is the scalar corresponding to that point.
+    signature.s
   end
 
   def calculate_event_point(pubkeys) do
     # TODO don't recalc this every time
+    {event_hash, event_nonce} = calculate_event_hash_and_nonce(pubkeys)
+    event_nonce_point = Secp256k1.PrivateKey.to_point(event_nonce)
     bao_point = Secp256k1.PrivateKey.to_point(@bao_scalar)
-    event_hash = calculate_event_hash(pubkeys)
-    point = Secp256k1.PrivateKey.to_point(event_hash)
-    # tweak event_hash_point with bao pubkey
-    Secp256k1.Math.add(point, bao_point)
-    # force even
-    |> Secp256k1.Point.x_bytes()
-    |> Secp256k1.Point.lift_x()
+
+    {:ok,
+     Secp256k1.Schnorr.calculate_signature_point(
+       event_nonce_point,
+       bao_point,
+       :binary.encode_unsigned(event_hash)
+     )}
   end
 end

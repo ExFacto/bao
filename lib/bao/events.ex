@@ -9,6 +9,7 @@ defmodule Bao.Events do
   alias Bao.Events.Event
 
   alias Bitcoinex.Secp256k1
+  alias Bitcoinex.Utils, as: BtcUtils
 
   # @doc """
   # Returns the list of events.
@@ -37,10 +38,23 @@ defmodule Bao.Events do
       ** (Ecto.NoResultsError)
 
   """
+
   # def get_event!(id), do: Repo.get!(Event, id)
 
   def get_event_pubkey_by_point!(point) do
-    Repo.get_by(EventPubkey, [point: point])
+    Repo.get_by(EventPubkey, point: point)
+  end
+
+  def get_event_by_point!(point) do
+    Repo.get_by!(Event, point: point)
+    |> Repo.preload(:event_pubkeys)
+  end
+
+  def get_event_by_point(point) do
+    case Repo.get_by(Event, point: point) do
+      nil -> nil
+      event -> Repo.preload(event, :event_pubkeys)
+    end
   end
 
   @doc """
@@ -55,13 +69,48 @@ defmodule Bao.Events do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_event(attrs) do
+  def create_event(%{"pubkeys" => pubkeys}) do
     # create all pubkey entries
     # put len(pubkeys) in attrs
     # generate new event
-    %Event{}
-    |> Event.changeset(attrs)
-    |> Repo.insert()
+    {:ok, point} = Event.calculate_event_point(pubkeys)
+    point_hex = Secp256k1.Point.serialize_public_key(point)
+    # pubkeys = Enum.reduce(pubkeys, [], fn pk, pks -> [%{"pubkey" => pk} | pks] end)
+    event =
+      Event.changeset(%Event{}, %{
+        "point" => point_hex,
+        "pubkey_ct" => length(pubkeys)
+      })
+
+    insert_event_and_pubkeys(event, pubkeys)
+
+    # TODO FIXME success or fail, we query again for the same event. FIXME
+    get_event_by_point!(point_hex)
+
+    # case insert_event_and_pubkeys(event, pubkeys, point_hex) do
+    #   :exists ->
+    #     get_event_by_point!(point_hex)
+    #   event ->
+    #     event
+    #     |> Repo.preload(:event_pubkey)
+    # end
+  end
+
+  # TODO this is not optimal
+  defp insert_event_and_pubkeys(event, pubkeys) do
+    Repo.transaction(fn ->
+      event = Repo.insert!(event, on_conflict: :nothing, returning: true)
+
+      try do
+        Enum.each(pubkeys, fn pubkey ->
+          Ecto.build_assoc(event, :event_pubkeys, pubkey: pubkey)
+          |> Repo.insert!()
+        end)
+      catch
+        _kind, %Postgrex.Error{postgres: %{code: :not_null_violation, column: "event_id"}} ->
+          :exists
+      end
+    end)
   end
 
   @doc """
@@ -76,27 +125,41 @@ defmodule Bao.Events do
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_event(%Event{} = event, attrs) do
+  def update_event(%Event{} = event, attrs = %{"scalar" => _scalar}) do
     event
     |> Event.changeset(attrs)
-    |> Repo.update()
+    |> Repo.update!()
   end
 
-  @doc """
-  Deletes a event.
+  def maybe_reveal_event(event) do
+    if get_signature_count(event) == event.pubkey_ct do
+      pubkeys = Enum.map(event.event_pubkeys, & &1.pubkey)
 
-  ## Examples
+      scalar =
+        Event.calculate_event_scalar(pubkeys)
+        # TODO simplify to int_to_hex
+        |> :binary.encode_unsigned()
+        |> BtcUtils.pad(32, :leading)
+        |> Base.encode16(case: :lower)
+        update_event(event, %{"scalar" => scalar})
+      end
+    end
 
-      iex> delete_event(event)
-      {:ok, %Event{}}
+  # @doc """
+  # Deletes a event.
 
-      iex> delete_event(event)
-      {:error, %Ecto.Changeset{}}
+  # ## Examples
 
-  """
-  def delete_event(%Event{} = event) do
-    Repo.delete(event)
-  end
+  #     iex> delete_event(event)
+  #     {:ok, %Event{}}
+
+  #     iex> delete_event(event)
+  #     {:error, %Ecto.Changeset{}}
+
+  # """
+  # def delete_event(%Event{} = event) do
+  #   Repo.delete(event)
+  # end
 
   @doc """
   Returns an `%Ecto.Changeset{}` for tracking event changes.
@@ -142,6 +205,9 @@ defmodule Bao.Events do
   """
   def get_event_pubkey!(id), do: Repo.get!(EventPubkey, id)
 
+  # can only be called with event_pubkeys loaded
+  def get_signature_count(event), do: Enum.count(event.event_pubkeys, & &1.signed)
+
   @doc """
   Creates a event_pubkey.
 
@@ -154,10 +220,8 @@ defmodule Bao.Events do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_event_pubkey(attrs \\ %{}) do
-    %EventPubkey{}
-    |> EventPubkey.changeset(attrs)
-    |> Repo.insert()
+  def create_event_pubkey(_attrs) do
+    # Handled by create_event
   end
 
   @doc """
@@ -207,13 +271,9 @@ defmodule Bao.Events do
     EventPubkey.changeset(event_pubkey, attrs)
   end
 
-  def verify_event_signature(event_point, user_point, signature) do
-    sighash =
-      event_point
-      |> Base.decode16!( case: :lower)
-      |> :binary.decode_unsigned()
+  def verify_event_signature(event_hash, user_point, signature) do
     {:ok, user_pk} = Secp256k1.Point.lift_x(user_point)
     {:ok, sig} = Secp256k1.Signature.parse_signature(signature)
-    Secp256k1.Schnorr.verify_signature(user_pk, sighash, sig)
+    Secp256k1.Schnorr.verify_signature(user_pk, event_hash, sig)
   end
 end

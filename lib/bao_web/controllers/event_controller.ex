@@ -11,33 +11,82 @@ defmodule BaoWeb.EventController do
   #   render(conn, "index.json", events: events)
   # end
 
-  def create(conn, attrs = %{"pubkeys" => pubkeys}) do
+  def create(conn, attrs = %{"pubkeys" => _}) do
     # TODO: Just return pubkeys & event_point
-    with {:ok, %Event{} = event} <- Events.create_event(attrs) do
-      conn
-      |> put_status(:created)
-      |> put_resp_header("location", Routes.event_path(conn, :show, event))
-      |> render("show.json", event: event)
+    case Events.create_event(attrs) do
+      %Event{} = event ->
+        conn
+        |> put_status(:created)
+        # |> put_resp_header("location", Routes.event_path(conn, :show, event))
+        |> display_event(event)
+
+      {:error, msg} ->
+        msg
     end
   end
 
-  def show(conn, %{"point" => point}) do
-    # TODO:
+  def show(conn, _) do
+    point = Map.fetch!(conn.query_params, "point")
     event = Events.get_event_by_point!(point)
-    render(conn, "show.json", event: event)
+    display_event(conn, event)
   end
 
-  def update(conn, %{"point" => user_point, "signature" => signature}) do
-    event = Events.get_event_by_point!(user_point)
+  def update(conn, %{
+        "event_point" => event_point,
+        "point" => user_point,
+        "signature" => signature
+      }) do
+    event =
+      case Events.get_event_by_point(event_point) do
+        nil ->
+          # TODO return 404
+          nil
+
+        event ->
+          event
+      end
+
+    # check that the provided user_point is party to this event
+    user_pk_idx =
+      case Enum.find_index(event.event_pubkeys, &(&1.pubkey == user_point)) do
+        nil ->
+          # TODO return 404
+          nil
+
+        idx ->
+          idx
+      end
+
+    event_hash =
+      event.event_pubkeys
+      |> Enum.map(fn epk -> epk.pubkey end)
+      |> Event.calculate_event_hash()
 
     # TODO error if this fails
-    true = Events.verify_event_signature(event.point, user_point, signature)
+    true = Events.verify_event_signature(event_hash, user_point, signature)
 
-    event_pk = Events.get_event_pubkey!(user_point)
+    with {:ok, user_pubkey} <-
+           Events.update_event_pubkey(Enum.at(event.event_pubkeys, user_pk_idx), %{
+             "signature" => signature,
+             "signed" => true
+           }) do
+      # instead, just replace the updated event_pubkey in this list
+      event_pubkeys = List.replace_at(event.event_pubkeys, user_pk_idx, user_pubkey)
+      event = %{event | event_pubkeys: event_pubkeys}
+      event = Events.maybe_reveal_event(event)
+      display_event(conn, event)
+    end
+  end
 
-    with {:ok, _} <- EventPubkeys.update_event_pubkey(event_pk, %{"signature" => signature}) do
-      # If successfully verified sig
-      render(conn, "show.json", event: event)
+  def display_event(conn, event) do
+    pk_ct = length(event.event_pubkeys)
+
+    case Events.get_signature_count(event) do
+      ^pk_ct ->
+        render(conn, "revealed_event.json", event: event)
+
+      sig_ct ->
+        render(conn, "event.json", %{event: event, sig_ct: sig_ct})
     end
   end
 

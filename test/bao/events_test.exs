@@ -21,7 +21,12 @@ defmodule Bao.EventsTest do
     end
 
     test "create_event/1 with valid data creates a event" do
-      valid_attrs = %{point: "some point", pubkey_ct: 42, scalar: "some scalar", state: "some state"}
+      valid_attrs = %{
+        point: "some point",
+        pubkey_ct: 42,
+        scalar: "some scalar",
+        state: "some state"
+      }
 
       assert {:ok, %Event{} = event} = Events.create_event(valid_attrs)
       assert event.point == "some point"
@@ -36,7 +41,13 @@ defmodule Bao.EventsTest do
 
     test "update_event/2 with valid data updates the event" do
       event = event_fixture()
-      update_attrs = %{point: "some updated point", pubkey_ct: 43, scalar: "some updated scalar", state: "some updated state"}
+
+      update_attrs = %{
+        point: "some updated point",
+        pubkey_ct: 43,
+        scalar: "some updated scalar",
+        state: "some updated state"
+      }
 
       assert {:ok, %Event{} = event} = Events.update_event(event, update_attrs)
       assert event.point == "some updated point"
@@ -81,7 +92,12 @@ defmodule Bao.EventsTest do
     end
 
     test "create_event_pubkey/1 with valid data creates a event_pubkey" do
-      valid_attrs = %{pubkey: "some pubkey", signature: "some signature", signed: true, signed_at: ~U[2023-03-15 22:58:00Z]}
+      valid_attrs = %{
+        pubkey: "some pubkey",
+        signature: "some signature",
+        signed: true,
+        signed_at: ~U[2023-03-15 22:58:00Z]
+      }
 
       assert {:ok, %EventPubkey{} = event_pubkey} = Events.create_event_pubkey(valid_attrs)
       assert event_pubkey.pubkey == "some pubkey"
@@ -96,9 +112,17 @@ defmodule Bao.EventsTest do
 
     test "update_event_pubkey/2 with valid data updates the event_pubkey" do
       event_pubkey = event_pubkey_fixture()
-      update_attrs = %{pubkey: "some updated pubkey", signature: "some updated signature", signed: false, signed_at: ~U[2023-03-16 22:58:00Z]}
 
-      assert {:ok, %EventPubkey{} = event_pubkey} = Events.update_event_pubkey(event_pubkey, update_attrs)
+      update_attrs = %{
+        pubkey: "some updated pubkey",
+        signature: "some updated signature",
+        signed: false,
+        signed_at: ~U[2023-03-16 22:58:00Z]
+      }
+
+      assert {:ok, %EventPubkey{} = event_pubkey} =
+               Events.update_event_pubkey(event_pubkey, update_attrs)
+
       assert event_pubkey.pubkey == "some updated pubkey"
       assert event_pubkey.signature == "some updated signature"
       assert event_pubkey.signed == false
@@ -107,7 +131,10 @@ defmodule Bao.EventsTest do
 
     test "update_event_pubkey/2 with invalid data returns error changeset" do
       event_pubkey = event_pubkey_fixture()
-      assert {:error, %Ecto.Changeset{}} = Events.update_event_pubkey(event_pubkey, @invalid_attrs)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Events.update_event_pubkey(event_pubkey, @invalid_attrs)
+
       assert event_pubkey == Events.get_event_pubkey!(event_pubkey.id)
     end
 
