@@ -1,20 +1,36 @@
 body {
+    margin: 0
+}
+
+.top {
+    /* background-color: #2A2A3A; */
     background-color: darkblue;
     color: white;
 }
 
+.top h1 {
+    margin: 0
+}
+
+.main {
+    /* background-color: #121212; */
+    background-color: darkblue;
+
+    color: white;
+}
+
 a {
-    color: red;
+    color: rgb(255,0,0);
 }
 
 a:active {
-    color: red;
+    color: rgb(255,0,0);
     text-transform: none;
 }
 
 .code {
-    background-color: black;
-    color: rgb(47, 255, 47);
+    background-color: #000;
+    color: rgb(0, 255, 0);
     border-radius: 10px;
     padding: 10px;
     overflow: scroll;

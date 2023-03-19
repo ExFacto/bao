@@ -4,6 +4,8 @@ services:
   bao_postgres:
     image: postgres:12.10
     container_name: bao_postgres
+    networks:
+      - bao_bridge
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -13,6 +15,24 @@ services:
     restart: on-failure
     ports:
       - "5438:5432"
+      # - "5432:5432"
+  bao:
+    image: bao:latest
+    container_name: bao
+    networks:
+      - bao_bridge
+    environment:
+      - BAO_PRIVATE_KEY=6ec653eb3f8ae80aae233b7527c846c2f2dc2d399c140a97dc748060842c98a3
+      - SECRET_KEY_BASE=z4uyOLxb25Wq+qoyUNigyR+GgdZ1gjCRHXnuFOTSX9wGtCbubY16j2AJQeoeXTxg
+      - DATABASE_URL=ecto://postgres:postgres@bao_postgres:5432/bao_dev
+    restart: on-failure
+    ports:
+      - "4000:4000"
 
 volumes:
   bao-postgres-volume:
+  bao:
+
+networks:
+  bao_bridge:
+    driver: bridge

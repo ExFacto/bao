@@ -7,6 +7,23 @@ import Config
 # any compile-time configuration in here, as it won't be applied.
 # The block below contains prod specific runtime configuration.
 
+# import privkey
+# TODO switch this to env var
+# import_config "runtime.secret.exs"
+# bao_privkey = System.get_env("BAO_PRIVATE_KEY") || raise "bao privkey unset"
+# config :bao,
+#   private_key: bao_privkey
+config :bao,
+  private_key: System.fetch_env!("BAO_PRIVATE_KEY")
+
+# TODO switch to this method instead of DATABASE_URL
+# config :bao, Bao.Repo,
+#   username: System.get_env("POSTGRES_USER"),
+#   database: System.get_env("POSTGRES_DB"),
+#   hostname: System.get_env("POSTGRES_HOST") || "127.0.0.1",
+#   port: System.get_env("POSTGRES_PORT"),
+#   pool_size: 5
+
 # ## Using releases
 #
 # If you use `mix release`, you need to explicitly enable the server
@@ -52,7 +69,7 @@ if config_env() == :prod do
   port = String.to_integer(System.get_env("PORT") || "4000")
 
   config :bao, BaoWeb.Endpoint,
-    url: [host: host, port: 443, scheme: "https"],
+    url: [host: host, port: 4000, scheme: "http"],
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.

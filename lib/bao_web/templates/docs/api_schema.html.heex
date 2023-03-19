@@ -1,13 +1,30 @@
 <h2>The Bao API Docs</h2>
 
-The Bao API accepts 3 types of requests:
+The Bao API accepts 3 types of requests. The first fetches the Oracle's pubkey. The other 3 are Event Requests
 <ul>
+    <li> Get Bao Identity</li>
     <li> Create Event </li>
     <li> Get Event </li>
     <li> Sign Event </li>
 </ul>
 
-All three requests use the same Endpoint: <pre class="code code-inline">/events</pre>
+<h2>Get Bao Identity</h2>
+
+The Bao Identity, an X-only pubkey should be queried once and stored before beginning any events. All Event Signatures should be verified using this pubkey.
+<br />
+<br />
+Endpoint: <pre class="code code-inline">/api/oracle</pre>
+<br />
+Method: <pre class="code code-inline">GET</pre>
+<br />
+Response:
+<pre class="code">
+{
+    "pubkey": "x-only pubkey"
+}
+</pre>
+
+All three Event requests use the same Endpoint: <pre class="code code-inline">/events</pre>
 
 <h2>Create Event</h2>
 
@@ -40,13 +57,13 @@ Response:
 
 <pre class="code">
 {
-    "event_hash": "1c84a21b933cfe9e54c31568da363afde53b52b69cc62368aa70bffb4da12873",
-    "event_point": "03ff25ea4d497f6a860b5de8e34e8a5dc621ad40650521317f378e96ee4484e509",
+    "event_hash": "32-byte hash",
+    "event_point": "33-byte compressed Event Point",
     "pubkeys": [
-        "83e026faee95884a5da9eab27201bbcfb0201c22f4d363dfc3edfbe15ffe3091",
-        "2e95ffd34f9d4d3d5632f6226ae02be3b3b1cab0fe345c63878c16abaef58c88"
+        "x-only pubkey",
+        ...
     ],
-    "signature_count": 0
+    "signature_count": integer
 }
 </pre>
 
@@ -65,23 +82,23 @@ Responses:
 Committed:
 <pre class="code">
 {
-    "event_point": "03d66cc3ba78cf11f6648a13f2fdac7ae99358182c3c7c704580b012b51945726a",
+    "event_point": "33-byte compressed Event Point",
     "pubkeys": [
-        "7d0f49a510dce8f6c4f263189d13ddf8c15049090119b06c37d8243c088d11d5",
-        "645b4c27b03cf5c0aaf9a310ca914b4632cb2f3fd9f56f6807b30227ddf6f726"
+        "x-only pubkey",
+        ...
     ],
-    "signature_count": 0
+    "signature_count": integer
 }
 </pre>
 
 Revealed:
 <pre class="code">
 {
-    "event_point": "02b4606d8fa38cf0e076fe9edc502e8627c9a63cd3221fecd3298b19d969653261",
-    "event_scalar": "8be5fb8fe0fb77f0260aceb33883072b99e656510dd9e038100fafb7d9ead478",
+    "event_point": "33-byte compressed Event Point",
+    "event_scalar": "32-byte Event Scalar",
     "pubkeys": [
-        "7d0f49a510dce8f6c4f263189d13ddf8c15049090119b06c37d8243c088d11d5",
-        "645b4c27b03cf5c019f9a310ca914b4632cb2f3fd9f56f6807b30227ddf6f726"
+        "x-only pubkey",
+        ...
     ]
 }
 </pre>
@@ -91,6 +108,16 @@ Revealed:
 Endpoint: <pre class="code code-inline">/api/event</pre>
 <br />
 Method: <pre class="code code-inline">PUT</pre>
+<br />
+Body:
+
+<pre class="code">
+{
+    "event_point": "33-byte compressed Event Point",
+    "pubkey": "x-only pubkey",
+    "signature": "64-byte signature"
+}
+</pre>
 
 Example:
 
@@ -106,24 +133,24 @@ Responses:
 Incomplete:
 <pre class="code">
 {
-    "event_hash": "1c84a21b933cfe9e54c31568da363afde53b52b69cc62368aa70bffb4da12873",
-    "event_point": "03ff25ea4d497f6a860b5de8e34e8a5dc621ad40650521317f378e96ee4484e509",
+    "event_hash": "32-byte hash",
+    "event_point": "33-byte compressed Event Point",
     "pubkeys": [
-        "83e026faee95884a5da9eab27201bbcfb0201c22f4d363dfc3edfbe15ffe3091",
-        "2e95ffd34f9d4d3d5632f6226ae02be3b3b1cab0fe345c63878c16abaef58c88"
+        "x-only pubkey",
+        ...
     ],
-    "signature_count": 1
+    "signature_count": integer
 }
 </pre>
 
 Complete:
 <pre class="code">
 {
-    "event_point": "03ff25ea4d497f6a860b5de8e34e8a5dc621ad40650521317f378e96ee4484e509",
-    "event_scalar": "a8cf9ee1515a62e9a5e7459a67f25e4bfe8dd4e71b090dfc6e41b6cb60249191",
+    "event_point": "33-byte compressed Event Point",
+    "event_scalar": "32-byte Event Scalar",
     "pubkeys": [
-        "83e026faee95884a5da9eab27201bbcfb0201c22f4d363dfc3edfbe15ffe3091",
-        "2e95ffd34f9d4d3d5632f6226ae02be3b3b1cab0fe345c63878c16abaef58c88"
+        "x-only pubkey",
+        ...
     ]
 }
 </pre>

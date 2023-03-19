@@ -11,13 +11,14 @@ defmodule BaoWeb.EventView do
     %{error: "event not found"}
   end
 
-  def render("400.json", %{reason: reason}) do
-    %{error: "bad request: #{reason}"}
+  def render("400.json", %{msg: msg}) do
+    %{error: "bad request: #{msg}"}
   end
 
   def render("event.json", %{event: event, sig_ct: sig_ct}) do
     %{
       event_point: event.point,
+      event_signature: event.signature,
       event_hash: event.hash,
       pubkeys: render_many(event.event_pubkeys, EventPubkeyView, "event_pubkey.json"),
       signature_count: sig_ct

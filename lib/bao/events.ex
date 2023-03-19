@@ -8,9 +8,9 @@ defmodule Bao.Events do
 
   alias Bao.Events.Event
   alias Bao.Events.EventPubkey
+  alias Bao.Utils
 
   alias Bitcoinex.Secp256k1
-  alias Bitcoinex.Utils, as: BtcUtils
 
   # @spec get_event_pubkey_by_point!(String.t()) :: EventPubkey.t()
   def get_event_pubkey_by_point!(point) do
@@ -44,32 +44,42 @@ defmodule Bao.Events do
 
   """
   def create_event(%{"pubkeys" => pubkeys}) do
-    # create all pubkey entries
-    # put len(pubkeys) in attrs
-    # generate new event
-    {:ok, event_hash, point} = Event.calculate_event_point(pubkeys)
-    event_hash_hex = Base.encode16(event_hash, case: :lower)
-    point_hex = Secp256k1.Point.serialize_public_key(point)
-    # pubkeys = Enum.reduce(pubkeys, [], fn pk, pks -> [%{"pubkey" => pk} | pks] end)
-    event =
-      Event.changeset(%Event{}, %{
-        "point" => point_hex,
-        "hash" => event_hash_hex,
-        "pubkey_ct" => length(pubkeys)
-      })
+    uniq_pubkeys = Enum.uniq(pubkeys)
+    pubkey_ct = length(pubkeys)
 
-    insert_event_and_pubkeys(event, pubkeys)
+    if length(uniq_pubkeys) != pubkey_ct do
+      {:error, "event cannot contain duplicate pubkeys"}
+    else
+      # create all pubkey entries
+      # put len(pubkeys) in attrs
+      # generate new event
+      {:ok, event_hash, point} = Event.calculate_event_point(pubkeys)
+      event_hash_hex = Utils.encode16(event_hash)
+      point_hex = Secp256k1.Point.serialize_public_key(point)
 
-    # TODO FIXME success or fail, we query again for the same event. FIXME
-    get_event_by_point!(point_hex)
+      event_sig_hex = Bao.sign_event_point(point)
+      # pubkeys = Enum.reduce(pubkeys, [], fn pk, pks -> [%{"pubkey" => pk} | pks] end)
+      event =
+        Event.changeset(%Event{}, %{
+          "point" => point_hex,
+          "hash" => event_hash_hex,
+          "pubkey_ct" => pubkey_ct,
+          "signature" => event_sig_hex
+        })
 
-    # case insert_event_and_pubkeys(event, pubkeys, point_hex) do
-    #   :exists ->
-    #     get_event_by_point!(point_hex)
-    #   event ->
-    #     event
-    #     |> Repo.preload(:event_pubkey)
-    # end
+      insert_event_and_pubkeys(event, pubkeys)
+
+      # TODO FIXME success or fail, we query again for the same event. FIXME
+      get_event_by_point!(point_hex)
+
+      # case insert_event_and_pubkeys(event, pubkeys, point_hex) do
+      #   :exists ->
+      #     get_event_by_point!(point_hex)
+      #   event ->
+      #     event
+      #     |> Repo.preload(:event_pubkey)
+      # end
+    end
   end
 
   # TODO this is not optimal
@@ -112,11 +122,9 @@ defmodule Bao.Events do
       pubkeys = Enum.map(event.event_pubkeys, & &1.pubkey)
 
       scalar =
-        Event.calculate_event_scalar(pubkeys)
-        # TODO simplify to int_to_hex
-        |> :binary.encode_unsigned()
-        |> BtcUtils.pad(32, :leading)
-        |> Base.encode16(case: :lower)
+        pubkeys
+        |> Event.calculate_event_scalar()
+        |> Utils.int_to_hex()
 
       update_event(event, %{"scalar" => scalar})
     else
@@ -163,7 +171,6 @@ defmodule Bao.Events do
     case get_event_by_point(event_point) do
       # event not found
       nil ->
-        IO.puts("here1")
         nil
 
       event ->
@@ -171,24 +178,23 @@ defmodule Bao.Events do
         case Enum.find_index(event.event_pubkeys, &(&1.pubkey == user_pubkey)) do
           # user pubkey not in event. return not found
           nil ->
-            IO.puts("here2")
             nil
 
           user_idx ->
-            verify_user_signature( event, event_point, user_pubkey, signature, user_idx)
+            verify_user_signature(event, user_pubkey, signature, user_idx)
         end
     end
   end
 
-  defp verify_user_signature(event, event_point, user_pubkey, signature, user_idx) do
-    if verify_event_signature(event.hash, user_pubkey, signature) do
-      do_update_event(event, user_pubkey, signature, user_idx)
+  defp verify_user_signature(event, user_pubkey, signature, user_idx) do
+    if verify_user_event_signature(event.hash, user_pubkey, signature) do
+      do_update_event(event, signature, user_idx)
     else
       {:error, "invalid signature"}
     end
   end
 
-  defp do_update_event(event, user_pubkey, signature, user_idx) do
+  defp do_update_event(event, signature, user_idx) do
     with {:ok, user_pubkey} <-
            update_event_pubkey(Enum.at(event.event_pubkeys, user_idx), %{
              "signature" => signature,
@@ -202,8 +208,8 @@ defmodule Bao.Events do
     end
   end
 
-  def verify_event_signature(event_hash, user_point, signature) do
-    event_hash = Base.decode16!(event_hash, case: :lower) |> :binary.decode_unsigned()
+  def verify_user_event_signature(event_hash, user_point, signature) do
+    event_hash = Utils.hex_to_int(event_hash)
     {:ok, user_pk} = Secp256k1.Point.lift_x(user_point)
     {:ok, sig} = Secp256k1.Signature.parse_signature(signature)
     Secp256k1.Schnorr.verify_signature(user_pk, event_hash, sig)

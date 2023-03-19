@@ -1,0 +1,132 @@
+{
+	"info": {
+		"_postman_id": "28d0c742-7a57-446e-9ad4-40f8dd9bebad",
+		"name": "Bao",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "17832451"
+	},
+	"item": [
+		{
+			"name": "New Event",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"pubkeys\": [\"2e95ffd34f9d4d3d5632f6226ae02be3b3b1cab0fe345c63878c16abaef58c88\", \"83e026faee95884a5da9eab27201bbcfb0201c22f4d363dfc3edfbe15ffe3091\"]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/event",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"event"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Event",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/event?point=03ff25ea4d497f6a860b5de8e34e8a5dc621ad40650521317f378e96ee4484e509",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"event"
+					],
+					"query": [
+						{
+							"key": "point",
+							"value": "03ff25ea4d497f6a860b5de8e34e8a5dc621ad40650521317f378e96ee4484e509"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Add Signature",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"event_point\": \"03ff25ea4d497f6a860b5de8e34e8a5dc621ad40650521317f378e96ee4484e509\",\n    \"pubkey\": \"2e95ffd34f9d4d3d5632f6226ae02be3b3b1cab0fe345c63878c16abaef58c88\",\n    \"signature\": \"45defcd4d89cc7f2e01d7e8a191828d8772ee229a0d7c23f407088b4cd9ac5c799aee3c57580b1a4cf15c86d14d9763a92a43108c5d9d0dd976690036bbf1dae\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/event",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"event"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Oracle",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/oracle",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"oracle"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "point",
+			"value": "02363bec033d045ed67e8440757df63f49e15e320aba4ab049de7446b4a14ae7d6"
+		}
+	]
+}

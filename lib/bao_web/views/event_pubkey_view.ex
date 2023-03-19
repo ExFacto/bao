@@ -1,6 +1,5 @@
 defmodule BaoWeb.EventPubkeyView do
   use BaoWeb, :view
-  alias BaoWeb.EventPubkeyView
 
   # def render("index.json", %{event_pubkeys: event_pubkeys}) do
   #   %{data: render_many(event_pubkeys, EventPubkeyView, "event_pubkey.json")}

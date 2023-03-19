@@ -6,6 +6,7 @@ defmodule Bao.Repo.Migrations.CreateEvents do
       add :pubkey_ct, :integer
       add :hash, :string
       add :point, :string
+      add :signature, :string
       add :scalar, :string
 
       timestamps()

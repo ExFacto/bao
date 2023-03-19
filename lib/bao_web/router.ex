@@ -10,6 +10,8 @@ defmodule BaoWeb.Router do
   scope "/api", BaoWeb do
     pipe_through :api
 
+    get "/oracle", OracleController, :index
+
     # lookup event
     get "/event", EventController, :show
     # create / verify event
@@ -31,7 +33,7 @@ defmodule BaoWeb.Router do
 
     get "/docs", DocsController, :index
     # redirect all traffic to docs
-    get "/*path", Plugs.DocsRedirector, :call
+    # get "/*path", Plugs.DocsRedirector, :call
   end
 
   # Enables LiveDashboard only for development
@@ -41,25 +43,25 @@ defmodule BaoWeb.Router do
   # If your application does not have an admins-only section yet,
   # you can use Plug.BasicAuth to set up some basic authentication
   # as long as you are also using SSL (which you should anyway).
-  if Mix.env() in [:dev, :test] do
-    import Phoenix.LiveDashboard.Router
+  # if Mix.env() in [:dev, :test] do
+  #   import Phoenix.LiveDashboard.Router
 
-    scope "/" do
-      pipe_through [:fetch_session, :protect_from_forgery]
+  #   scope "/" do
+  #     pipe_through [:fetch_session, :protect_from_forgery]
 
-      live_dashboard "/dashboard", metrics: BaoWeb.Telemetry
-    end
-  end
+  #     live_dashboard "/dashboard", metrics: BaoWeb.Telemetry
+  #   end
+  # end
 
   # Enables the Swoosh mailbox preview in development.
   #
   # Note that preview only shows emails that were sent by the same
   # node running the Phoenix server.
-  if Mix.env() == :dev do
-    scope "/dev" do
-      pipe_through [:fetch_session, :protect_from_forgery]
+  # if Mix.env() == :dev do
+  #   scope "/dev" do
+  #     pipe_through [:fetch_session, :protect_from_forgery]
 
-      forward "/mailbox", Plug.Swoosh.MailboxPreview
-    end
-  end
+  #     forward "/mailbox", Plug.Swoosh.MailboxPreview
+  #   end
+  # end
 end

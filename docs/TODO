@@ -1,0 +1,9 @@
+- Callback URLs for an event
+- Add Hash-Preimage event type
+- Write full testing
+- Threshold Events (m-of-n sigs required)
+- DONE Should Bao publish its public key and sign event points/hashes? 
+    - This decreases the possibility of a MITM attack, but event hashes are deterministic, there is no way to fake an event or get a user to sign something other than the Event Hash.
+
+- DONE centralize Hash function for easy swap
+- look at switching entropy source in Utils.new_rand_int
