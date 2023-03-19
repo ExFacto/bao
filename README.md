@@ -25,13 +25,15 @@ The cryptography used here is implemented in [Bitcoinex](https://github.com/Sach
 
 ### Event Hash
 
+NOTE: The Event Hash is currently what is signed by the parties to unlock the Scalar. We are, however, considering the tradeoffs between having participants sign the Event Hash or the Event Point. Follow the discussion [here](https://github.com/ExFacto/bao/discussions/1)
+
 The Bao (this server), receives Commit requests comprising of a list of pubkeys. Based on those pubkeys, Bao deterministically generates an event hash. The event hash is hash256 (double sha256) digest of the concatenated x_bytes of the BIP-67-sorted pubkeys.
 
 ```python
 sorted_pubkeys = lexicographical_sort_pubkeys(pubkeys)
 pubkeys_x_bytes = [pk.x.to_bytes(32, 'big') for pk in sorted_pubkeys]
 preimage = b' '.join(x_bytes)
-hashlib.sha256(preimage).digtest()
+hashlib.sha256(hashlib.sha256(preimage)).digest()
 ```
 
 Thus, for a given set of pubkeys, Bao users should be able to calculate the event hash before making the Commit request to Bao. 

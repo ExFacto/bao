@@ -7,49 +7,23 @@ defmodule Bao.Events do
   alias Bao.Repo
 
   alias Bao.Events.Event
+  alias Bao.Events.EventPubkey
 
   alias Bitcoinex.Secp256k1
   alias Bitcoinex.Utils, as: BtcUtils
 
-  # @doc """
-  # Returns the list of events.
-
-  # ## Examples
-
-  #     iex> list_events()
-  #     [%Event{}, ...]
-
-  # """
-  # def list_events do
-  #   Repo.all(Event)
-  # end
-
-  @doc """
-  Gets a single event.
-
-  Raises `Ecto.NoResultsError` if the Event does not exist.
-
-  ## Examples
-
-      iex> get_event!(123)
-      %Event{}
-
-      iex> get_event!(456)
-      ** (Ecto.NoResultsError)
-
-  """
-
-  # def get_event!(id), do: Repo.get!(Event, id)
-
+  # @spec get_event_pubkey_by_point!(String.t()) :: EventPubkey.t()
   def get_event_pubkey_by_point!(point) do
     Repo.get_by(EventPubkey, point: point)
   end
 
+  # @spec get_event_by_point!(String.t()) :: Event.t()
   def get_event_by_point!(point) do
     Repo.get_by!(Event, point: point)
     |> Repo.preload(:event_pubkeys)
   end
 
+  # @spec get_event_by_point(String.t()) :: Event.t()
   def get_event_by_point(point) do
     case Repo.get_by(Event, point: point) do
       nil -> nil
@@ -73,12 +47,14 @@ defmodule Bao.Events do
     # create all pubkey entries
     # put len(pubkeys) in attrs
     # generate new event
-    {:ok, point} = Event.calculate_event_point(pubkeys)
+    {:ok, event_hash, point} = Event.calculate_event_point(pubkeys)
+    event_hash_hex = Base.encode16(event_hash, case: :lower)
     point_hex = Secp256k1.Point.serialize_public_key(point)
     # pubkeys = Enum.reduce(pubkeys, [], fn pk, pks -> [%{"pubkey" => pk} | pks] end)
     event =
       Event.changeset(%Event{}, %{
         "point" => point_hex,
+        "hash" => event_hash_hex,
         "pubkey_ct" => length(pubkeys)
       })
 
@@ -141,25 +117,12 @@ defmodule Bao.Events do
         |> :binary.encode_unsigned()
         |> BtcUtils.pad(32, :leading)
         |> Base.encode16(case: :lower)
-        update_event(event, %{"scalar" => scalar})
-      end
+
+      update_event(event, %{"scalar" => scalar})
+    else
+      event
     end
-
-  # @doc """
-  # Deletes a event.
-
-  # ## Examples
-
-  #     iex> delete_event(event)
-  #     {:ok, %Event{}}
-
-  #     iex> delete_event(event)
-  #     {:error, %Ecto.Changeset{}}
-
-  # """
-  # def delete_event(%Event{} = event) do
-  #   Repo.delete(event)
-  # end
+  end
 
   @doc """
   Returns an `%Ecto.Changeset{}` for tracking event changes.
@@ -174,55 +137,8 @@ defmodule Bao.Events do
     Event.changeset(event, attrs)
   end
 
-  alias Bao.Events.EventPubkey
-
-  @doc """
-  Returns the list of event_pubkeys.
-
-  ## Examples
-
-      iex> list_event_pubkeys()
-      [%EventPubkey{}, ...]
-
-  """
-  def list_event_pubkeys do
-    Repo.all(EventPubkey)
-  end
-
-  @doc """
-  Gets a single event_pubkey.
-
-  Raises `Ecto.NoResultsError` if the Event pubkey does not exist.
-
-  ## Examples
-
-      iex> get_event_pubkey!(123)
-      %EventPubkey{}
-
-      iex> get_event_pubkey!(456)
-      ** (Ecto.NoResultsError)
-
-  """
-  def get_event_pubkey!(id), do: Repo.get!(EventPubkey, id)
-
-  # can only be called with event_pubkeys loaded
+  # can only be called with event_pubkeys preloaded
   def get_signature_count(event), do: Enum.count(event.event_pubkeys, & &1.signed)
-
-  @doc """
-  Creates a event_pubkey.
-
-  ## Examples
-
-      iex> create_event_pubkey(%{field: value})
-      {:ok, %EventPubkey{}}
-
-      iex> create_event_pubkey(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def create_event_pubkey(_attrs) do
-    # Handled by create_event
-  end
 
   @doc """
   Updates a event_pubkey.
@@ -242,36 +158,52 @@ defmodule Bao.Events do
     |> Repo.update()
   end
 
-  @doc """
-  Deletes a event_pubkey.
+  def handle_event_signature(event_point, user_pubkey, signature) do
+    # lookup event
+    case get_event_by_point(event_point) do
+      # event not found
+      nil ->
+        IO.puts("here1")
+        nil
 
-  ## Examples
+      event ->
+        # check that the provided user_pubkey is party to this event
+        case Enum.find_index(event.event_pubkeys, &(&1.pubkey == user_pubkey)) do
+          # user pubkey not in event. return not found
+          nil ->
+            IO.puts("here2")
+            nil
 
-      iex> delete_event_pubkey(event_pubkey)
-      {:ok, %EventPubkey{}}
-
-      iex> delete_event_pubkey(event_pubkey)
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def delete_event_pubkey(%EventPubkey{} = event_pubkey) do
-    Repo.delete(event_pubkey)
+          user_idx ->
+            verify_user_signature( event, event_point, user_pubkey, signature, user_idx)
+        end
+    end
   end
 
-  @doc """
-  Returns an `%Ecto.Changeset{}` for tracking event_pubkey changes.
+  defp verify_user_signature(event, event_point, user_pubkey, signature, user_idx) do
+    if verify_event_signature(event.hash, user_pubkey, signature) do
+      do_update_event(event, user_pubkey, signature, user_idx)
+    else
+      {:error, "invalid signature"}
+    end
+  end
 
-  ## Examples
+  defp do_update_event(event, user_pubkey, signature, user_idx) do
+    with {:ok, user_pubkey} <-
+           update_event_pubkey(Enum.at(event.event_pubkeys, user_idx), %{
+             "signature" => signature,
+             "signed" => true
+           }) do
+      # instead, just replace the updated event_pubkey in this list
+      event_pubkeys = List.replace_at(event.event_pubkeys, user_idx, user_pubkey)
 
-      iex> change_event_pubkey(event_pubkey)
-      %Ecto.Changeset{data: %EventPubkey{}}
-
-  """
-  def change_event_pubkey(%EventPubkey{} = event_pubkey, attrs \\ %{}) do
-    EventPubkey.changeset(event_pubkey, attrs)
+      %{event | event_pubkeys: event_pubkeys}
+      |> maybe_reveal_event()
+    end
   end
 
   def verify_event_signature(event_hash, user_point, signature) do
+    event_hash = Base.decode16!(event_hash, case: :lower) |> :binary.decode_unsigned()
     {:ok, user_pk} = Secp256k1.Point.lift_x(user_point)
     {:ok, sig} = Secp256k1.Signature.parse_signature(signature)
     Secp256k1.Schnorr.verify_signature(user_pk, event_hash, sig)

@@ -2,6 +2,7 @@ defmodule BaoWeb.Router do
   # alias BaoWeb.EventController
   use BaoWeb, :router
 
+  # api must be defined first because all other paths redirect to /docs
   pipeline :api do
     plug :accepts, ["json"]
   end
@@ -9,9 +10,28 @@ defmodule BaoWeb.Router do
   scope "/api", BaoWeb do
     pipe_through :api
 
+    # lookup event
     get "/event", EventController, :show
+    # create / verify event
     post "/event", EventController, :create
+    # post signature to event
     put "/event", EventController, :update
+  end
+
+  pipeline :browser do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    # plug :fetch_live_flash
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+  end
+
+  scope "/", BaoWeb do
+    pipe_through :browser
+
+    get "/docs", DocsController, :index
+    # redirect all traffic to docs
+    get "/*path", Plugs.DocsRedirector, :call
   end
 
   # Enables LiveDashboard only for development

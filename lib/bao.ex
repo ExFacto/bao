@@ -22,7 +22,6 @@ defmodule Bao do
       |> :binary.decode_unsigned()
       |> PrivateKey.new()
 
-
     Secp256k1.force_even_y(scalar)
   end
 

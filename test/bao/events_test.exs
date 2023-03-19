@@ -79,7 +79,7 @@ defmodule Bao.EventsTest do
 
     import Bao.EventsFixtures
 
-    @invalid_attrs %{pubkey: nil, signature: nil, signed: nil, signed_at: nil}
+    @invalid_attrs %{pubkey: nil, signature: nil, signed: nil}
 
     test "list_event_pubkeys/0 returns all event_pubkeys" do
       event_pubkey = event_pubkey_fixture()
@@ -93,17 +93,16 @@ defmodule Bao.EventsTest do
 
     test "create_event_pubkey/1 with valid data creates a event_pubkey" do
       valid_attrs = %{
-        pubkey: "some pubkey",
-        signature: "some signature",
-        signed: true,
-        signed_at: ~U[2023-03-15 22:58:00Z]
+        pubkey: "645b4c27b03cf5c019f9a310ca914b4632cb2f3fd9f56f6807b30227ddf6f726",
+        signature:
+          "b999e7e39dc41a8c4f041618fe642ac73bdaaf3ffd4e413c0e87210eb9397f33b735a52359b5dd6a89583b8521c5d6f736f7c8d5d1b47ee7d8c994dcf5c4bc5e",
+        signed: true
       }
 
       assert {:ok, %EventPubkey{} = event_pubkey} = Events.create_event_pubkey(valid_attrs)
       assert event_pubkey.pubkey == "some pubkey"
       assert event_pubkey.signature == "some signature"
       assert event_pubkey.signed == true
-      assert event_pubkey.signed_at == ~U[2023-03-15 22:58:00Z]
     end
 
     test "create_event_pubkey/1 with invalid data returns error changeset" do
@@ -116,8 +115,7 @@ defmodule Bao.EventsTest do
       update_attrs = %{
         pubkey: "some updated pubkey",
         signature: "some updated signature",
-        signed: false,
-        signed_at: ~U[2023-03-16 22:58:00Z]
+        signed: false
       }
 
       assert {:ok, %EventPubkey{} = event_pubkey} =
@@ -126,7 +124,6 @@ defmodule Bao.EventsTest do
       assert event_pubkey.pubkey == "some updated pubkey"
       assert event_pubkey.signature == "some updated signature"
       assert event_pubkey.signed == false
-      assert event_pubkey.signed_at == ~U[2023-03-16 22:58:00Z]
     end
 
     test "update_event_pubkey/2 with invalid data returns error changeset" do

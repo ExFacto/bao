@@ -1,0 +1,61 @@
+<h2>What Is Bao?</h2>
+
+<p>
+Bao operates a Barrier Oracle over a simple HTTP JSON API.
+</p>
+
+<h2>What Is a Barrier Oracle?</h2>
+
+<p>
+Unlike a regular Oracle, A Barrier Oracle does not attest to a specific state of reality. A Barrier Oracle allows a group of entities to trade secrets in an atomic and basically instantaneous manner.
+</p>
+<p>
+Bao works in two stages: a Commit and a Reveal stage. During the Commit phase, the Bao reveals a Point. In the Reveal stage, the Oracle reveals the scalar (private key) to this point.
+</p>
+<p>
+To initiate the Commit stage, the parties collectively submit a list of pubkeys to the Bao. The Bao deterministically generates an Event Hash and Event Point and returns them. Since these data are deterministic based on the list of pubkeys, all parties can submit the same request and receive the same Event Point. The pubkeys are sorted using BIP67 before being used to generate the Event Hash, so their order in the Commit Request does not matter.
+</p>
+<p>
+One by one, each party then signs the Event Hash using the pubkey they contributed to the original list.
+</p>
+<p>
+Only once all pubkeys have signed the Event Point will the Bao reveal the Event Scalar, the private key to the event point.
+</p>
+
+<h2>What Problems Do Barrier Oracles Solve?</h2>
+
+<p>
+At an abstract level, Barrier Oracles allow parties to learn a secret at the same time and atomically.
+</p>
+<p>
+For onchain transactions that require multiple parties' signatures, Barrier Oracles can solve the <strong>free option problem</strong>. The clearest example for this use case is DLCs. If both parties have already signed Contract Execution Transactions (CETs) for a DLC Contract, but only one has signed the funding transaction, the other has a free option to sign and broadcast the funding transaction, or wait and see how the conditions of their contract play out.
+</p>
+<p>
+For a longer explanation on how Barrier Oracles solve the DLC free option problem, read more <a target="_blank" href="https://mailmanlists.org/pipermail/dlc-dev/2023-March/000172.html">here</a>.
+</p>
+<p>
+Barrier Oracles also solves the free option problem offchain, for example on Lightning. If two parties want make two payments atomically, they would also run into a situation where one party has a free option.
+</p>
+
+<h2> Security & Privacy of Bao</h2>
+
+This project was started mid-March 2023. It uses large amounts of unreviewed or under-reviewed code for the cryptography. The business logic is so far a one-man job. Do not rely on this app for any security-critical purposes.
+
+With that said, the code is open sourced <a target="_blank" href="https://github.com/exfacto/bao">here</a>. All review and feedback is welcome.
+
+The following section discusses Barrier Oracles more generally.
+
+<h2>Security & Privacy of Barrier Oracles</h2>
+
+<p>
+As with standard Oracle's, Barrier Oracles are trusted entities. However, the scope of their involvement in cryptographic activities in intentionally limited, as is their insight into said activities.
+</p>
+<p>
+Barrier Oracles don't need to know what you're doing or who your counterparties are.
+</p>
+<p>
+A censorship-resistant way for all parties to communicate with the Oracle is necessary for proper functionality. If one or more parties can be denied access to the Oracle during the Reveal stage, either due to attacks against the Oracle or the party themselves, they will be unable to learn the secret at the same time as the others.
+</p>
+<p>
+The consequences of learning the secret later or never depend entirely on the activity. In the scope of solving the DLC free option problem, the consequences are fairly limited: the attacker gets a free option, just as they would if Barrier Oracles were not used at all in the contract setup.
+</p>

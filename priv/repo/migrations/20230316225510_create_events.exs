@@ -4,6 +4,7 @@ defmodule Bao.Repo.Migrations.CreateEvents do
   def change do
     create table(:events) do
       add :pubkey_ct, :integer
+      add :hash, :string
       add :point, :string
       add :scalar, :string
 

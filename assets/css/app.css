@@ -1,0 +1,27 @@
+body {
+    background-color: darkblue;
+    color: white;
+}
+
+a {
+    color: red;
+}
+
+a:active {
+    color: red;
+    text-transform: none;
+}
+
+.code {
+    background-color: black;
+    color: rgb(47, 255, 47);
+    border-radius: 10px;
+    padding: 10px;
+    overflow: scroll;
+}
+
+.code-inline {
+    border-radius: 2px;
+    padding: 2px 4px;
+    display: inline;
+}

@@ -30,8 +30,7 @@ defmodule Bao.EventsFixtures do
       |> Enum.into(%{
         pubkey: "some pubkey",
         signature: "some signature",
-        signed: true,
-        signed_at: ~U[2023-03-15 22:58:00Z]
+        signed: true
       })
       |> Bao.Events.create_event_pubkey()
 
