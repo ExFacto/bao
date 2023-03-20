@@ -7,9 +7,9 @@ An instance of Bao is going to be set up soon. However, this project is Open Sou
 
 ## Bao Client
 
-TODO: a Bao client is needed. There are only 4 endpoints, so implementation should be simple. Schnorr signing as defined in BIP340 is needed to produce signatures for the API. 
+A rudimentary client library can be found [here](https://github.com/ExFacto/bao_client). The client actually contains an integration test to run against the server.
 
-Until a client is built, there is a Postman collection in [/docs](/docs/Bao.postman_collection.json)
+Until a full client is built, there is a Postman collection in [/docs](/docs/Bao.postman_collection.json)
 
 ## Run a Bao Server
 
