@@ -19,6 +19,8 @@ services:
   bao:
     image: bao:latest
     container_name: bao
+    depends_on:
+      - bao_postgres
     networks:
       - bao_bridge
     environment:
@@ -31,7 +33,6 @@ services:
 
 volumes:
   bao-postgres-volume:
-  bao:
 
 networks:
   bao_bridge:

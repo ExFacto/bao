@@ -10,10 +10,10 @@
 #   - https://hub.docker.com/r/hexpm/elixir/tags - for the build image
 #   - https://hub.docker.com/_/debian?tab=tags&page=1&name=bullseye-20221004-slim - for the release image
 #   - https://pkgs.org/ - resource for finding needed packages
-#   - Ex: hexpm/elixir:1.14.2-erlang-25.2-debian-bullseye-20221004-slim
+#   - Ex: hexpm/elixir:1.14.2-erlang-25.1.2-debian-bullseye-20221004-slim
 #
 ARG ELIXIR_VERSION=1.14.2
-ARG OTP_VERSION=25.2
+ARG OTP_VERSION=25.1.2
 ARG DEBIAN_VERSION=bullseye-20221004-slim
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
@@ -38,11 +38,11 @@ ENV MIX_ENV="prod"
 # install mix dependencies
 COPY mix.exs mix.lock ./
 RUN mix deps.get --only $MIX_ENV
+RUN mkdir config
 
 # copy compile-time config files before we compile dependencies
 # to ensure any relevant config change will trigger the dependencies
 # to be re-compiled.
-RUN mkdir config
 COPY config/config.exs config/${MIX_ENV}.exs config/
 RUN mix deps.compile
 
@@ -61,7 +61,7 @@ RUN mix compile
 # Changes to config/runtime.exs don't require recompiling the code
 COPY config/runtime.exs config/
 
-# COPY rel rel
+COPY rel rel
 RUN mix release
 
 # start a new build stage so that the final image will only contain
@@ -78,17 +78,15 @@ ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
 
-RUN mkdir -p /app
-RUN addgroup -gid 2001 --system bao && adduser --uid 1001 bao --ingroup bao
-RUN chown bao -R /app
 WORKDIR "/app"
+RUN chown nobody /app
 
 # set runner ENV
 ENV MIX_ENV="prod"
 
 # Only copy the final release from the build stage
-COPY --from=builder --chown=bao:bao /app/_build/${MIX_ENV}/rel/bao /app/
+COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/bao ./
 
-USER bao
-EXPOSE 4000
-CMD ["/app/bin/bao", "start"]
+USER nobody
+
+CMD ["/app/bin/server"]
