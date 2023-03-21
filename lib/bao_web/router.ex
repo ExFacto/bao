@@ -31,6 +31,7 @@ defmodule BaoWeb.Router do
   scope "/", BaoWeb do
     pipe_through :browser
 
+    get "/", Plugs.DocsRedirector, :call
     get "/docs", DocsController, :index
     # redirect all traffic to docs
     # get "/*path", Plugs.DocsRedirector, :call
